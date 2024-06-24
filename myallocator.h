@@ -4,23 +4,22 @@
 #include <cstdlib>
 #include <new>
 #include <type_traits>
+#include <algorithm>
 
 template <class T>
-struct MyAllocator {
-	std::size_t m_pos = 0;
-	std::size_t m_size = 0;
-	void *m_pool = nullptr;
-
+class MyAllocator {
+public:
 	using value_type = T;
+	using propagate_on_container_copy_assignment = std::true_type;
+	using propagate_on_container_move_assignment = std::true_type;
+	using propagate_on_container_swap = std::true_type;
 
-	MyAllocator() = delete;
+	MyAllocator() = default;
 
 	MyAllocator (std::size_t size) noexcept
-		: m_size(size),
-		  m_pool(malloc(sizeof(T) * m_size))
+		: m_size(size)
 	{
 	}
-
 
 	MyAllocator(const MyAllocator & a) noexcept
 		: MyAllocator(a.m_size) {
@@ -28,7 +27,7 @@ struct MyAllocator {
 
 	template <class U>
 	MyAllocator(const MyAllocator <U>& a) noexcept
-	: MyAllocator(a.m_size){
+	: MyAllocator(a.getSize()){
 	}
 
 	~MyAllocator() {
@@ -41,8 +40,17 @@ struct MyAllocator {
 
 	T* allocate (std::size_t n)
 	{
+		if (m_pool == nullptr) {
+			m_pool = malloc(n > m_size ? n : m_size);
+		}
 		if (m_pos + n > m_size) {
-			throw std::bad_alloc();
+			// Места не хватило. Выделить бы
+			size_t newSize = m_size == 0 ? 1 : m_size * 2;
+			void *newPool = malloc(sizeof(T) * newSize);
+			std::move(static_cast<T*>(m_pool), static_cast<T*>(m_pool) + m_pos, static_cast<T*>(newPool));
+
+			std::swap(m_size, newSize);
+			std::swap(m_pool, newPool);
 		}
 		std::size_t currPos = m_pos;
 		m_pos += n;
@@ -53,9 +61,14 @@ struct MyAllocator {
 	{
 	}
 
-	using propagate_on_container_copy_assignment = std::true_type;
-	using propagate_on_container_move_assignment = std::true_type;
-	using propagate_on_container_swap = std::true_type;
+	std::size_t getSize() const {
+		return m_size;
+	}
+
+private:
+	std::size_t m_pos = 0;
+	std::size_t m_size = 0;
+	void *m_pool = nullptr;
 };
 
 template <class T, class U>

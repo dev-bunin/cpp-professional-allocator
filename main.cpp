@@ -23,21 +23,29 @@ void printMap(const Map &map) {
 	}
 }
 
+void testStdMapWithStdAlloc() {
+	map<int, int> map;
+	fillFactorial(map, CONTAINER_SIZE);
+	printMap(map);
+}
+
+void testStdMapWithMyAlloc() {
+	std::map<int, int, std::less<int>, MyAllocator<std::pair<const int, int> > > map(MyAllocator<std::pair<const int, int>>(10));
+	fillFactorial(map, CONTAINER_SIZE);
+	printMap(map);
+}
+
+void testStdMapWithScalableMyAlloc() {
+	std::map<int, int, std::less<int>, MyAllocator<std::pair<const int, int> > > map;
+	fillFactorial(map, CONTAINER_SIZE);
+	printMap(map);
+}
+
 int main() {
 	try {
-		map<int, int> map1;
-		fillFactorial(map1, CONTAINER_SIZE);
-
-		std::map<int, int, std::less<int>, MyAllocator<std::pair<const int, int> > > map2(MyAllocator<std::pair<const int, int>>(10));
-		fillFactorial(map2, CONTAINER_SIZE);
-
-		cout << "Default: \n ";
-		printMap(map1);
-
-		cout << "Custom: \n";
-		printMap(map2);
-		cout << endl;
-
+		testStdMapWithStdAlloc();
+		testStdMapWithMyAlloc();
+		testStdMapWithScalableMyAlloc();
 	} catch(const exception &e) {
 		cerr << e.what() << endl;
 	}
